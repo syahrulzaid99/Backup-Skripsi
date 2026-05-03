@@ -9,7 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// GANTI sesuai server kamu
-const String baseUrl = 'http://192.168.1.23:3000';
+const String baseUrl = 'https://aqua.infinitylink.my.id';
 
 void main() => runApp(const MyApp());
 

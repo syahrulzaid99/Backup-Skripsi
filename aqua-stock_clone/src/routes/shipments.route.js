@@ -5,7 +5,7 @@ const { randomUUID } = require('crypto');
 
 const { db } = require('../firebaseAdmin');
 const { requireAuth, requireAuthApi, requireRole } = require('../middleware/auth');
-const { generateSequentialCode } = require('../utils/generateCode');
+const { generateSequentialCode, generateResiCode } = require('../utils/generateCode');
 
 const csrfProtection = csrf({ cookie: true });
 router.use(express.urlencoded({ extended: false }));
@@ -98,8 +98,12 @@ router.post('/admin/shipments', requireAuth, requireRole(['admin']), csrfProtect
             return res.redirect('/admin/shipments?err=' + encodeURIComponent('Field wajib belum lengkap'));
         }
 
-        // === generate kode otomatis ===
-        const kode_pengiriman = await generateSequentialCode('shipments', 'SO', 'kode_pengiriman');
+        // === generate kode otomatis (Resi & SO) ===
+        const kode_pengiriman = await generateResiCode();
+        let final_so_number = (so_number || '').trim();
+        if (!final_so_number) {
+            final_so_number = await generateSequentialCode('shipments', 'SO', 'so_number');
+        }
 
         const id = require('crypto').randomUUID();
         const pengirim = req.user.uid;
@@ -135,12 +139,14 @@ router.post('/admin/shipments', requireAuth, requireRole(['admin']), csrfProtect
             id,
             kode_pengiriman,
             po_number: (po_number || '').trim(),
-            so_number: (so_number || '').trim() || kode_pengiriman, // Auto-fill jika kosong
+            so_number: final_so_number,
             pengirim,
             penerima,
             data_barang: enriched_data_barang,
             status: status || 'draft',
-            keterangan: keterangan || ''
+            keterangan: keterangan || '',
+            createdAt: new Date(),
+            updatedAt: new Date()
         };
 
         await db.collection('shipments').doc(id).set(doc);

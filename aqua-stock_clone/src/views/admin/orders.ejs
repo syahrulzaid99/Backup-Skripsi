@@ -182,6 +182,12 @@
                     <span class="<%= badgeClass %> pill-badge">
                         <%= (o.status || 'pending').toUpperCase() %>
                     </span>
+                    <form method="POST" action="/admin/orders/<%= o.id %>/delete" style="display:inline;" data-confirm-delete>
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Hapus Pesanan" style="font-size: 1.1rem; line-height: 1;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -284,6 +290,7 @@
         if (ok && hasSwal()) {
             var title = ok;
             if (ok === 'updated') title = 'Status pesanan berhasil diperbarui';
+            if (ok === 'deleted') title = 'Pesanan berhasil dihapus';
 
             Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: title, showConfirmButton: false, timer: 3000, timerProgressBar: true });
             params.delete('ok');
@@ -320,6 +327,40 @@
                     confirmButtonText: 'Simpan',
                     cancelButtonText: 'Batal',
                     confirmButtonColor: '#4e73df'
+                }).then(function (r) {
+                    if (r.isConfirmed) {
+                        form.dataset.confirmHandled = '1';
+                        form.submit();
+                    }
+                });
+            } else {
+                if (confirm(msg)) {
+                    form.dataset.confirmHandled = '1';
+                    form.submit();
+                }
+            }
+        }, true);
+
+        // === KONFIRMASI HAPUS PESANAN
+        document.addEventListener('submit', function (ev) {
+            var form = ev.target;
+            if (!form || !form.matches('form[data-confirm-delete]')) return;
+
+            if (form.dataset.confirmHandled === '1') return;
+
+            ev.preventDefault();
+
+            var msg = 'Apakah Anda yakin ingin menghapus pesanan ini? Tindakan ini tidak dapat dibatalkan.';
+
+            if (hasSwal()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Hapus Pesanan?',
+                    text: msg,
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#e74a3b'
                 }).then(function (r) {
                     if (r.isConfirmed) {
                         form.dataset.confirmHandled = '1';

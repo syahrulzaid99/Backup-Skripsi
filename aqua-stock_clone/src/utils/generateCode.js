@@ -53,4 +53,14 @@ async function generateSequentialCode(collectionName, prefix, codeField) {
     return `${prefix}-${dateStr}-${sequenceStr}`;
 }
 
-module.exports = { generateSequentialCode };
+async function generateResiCode() {
+    const prefix = "TRXID";
+    // Generate a string of 10 random digits
+    let randomDigits = "";
+    for (let i = 0; i < 10; i++) {
+        randomDigits += Math.floor(Math.random() * 10).toString();
+    }
+    return `${prefix}${randomDigits}`;
+}
+
+module.exports = { generateSequentialCode, generateResiCode };

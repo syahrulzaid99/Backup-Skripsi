@@ -3,7 +3,7 @@ const router = express.Router();
 const csrf = require('csurf');
 const { randomUUID } = require('crypto');
 const admin = require('firebase-admin');
-const { generateSequentialCode } = require('../utils/generateCode');
+const { generateSequentialCode, generateResiCode } = require('../utils/generateCode');
 
 const { db } = require('../firebaseAdmin');
 const { requireAuth, requireRole } = require('../middleware/auth');
@@ -124,8 +124,9 @@ router.post('/admin/orders/:id', requireAuth, requireRole(['admin']), csrfProtec
 
         // Jika status diubah jadi 'dikirim' dan sebelumnya belum 'dikirim'
         if (newStatus === 'dikirim' && currentData.status !== 'dikirim') {
-            // 1. Generate Kode Pengiriman
-            const kode_pengiriman = await generateSequentialCode('shipments', 'SO', 'kode_pengiriman');
+            // 1. Generate Kode Pengiriman (Resi) dan SO Number
+            const kode_pengiriman = await generateResiCode();
+            const so_number = await generateSequentialCode('shipments', 'SO', 'so_number');
 
             const shipmentId = randomUUID();
             const items = (currentData.items || []).map(it => ({
@@ -138,12 +139,11 @@ router.post('/admin/orders/:id', requireAuth, requireRole(['admin']), csrfProtec
             const orderKet = (keterangan && typeof keterangan === 'string') ? keterangan.trim() : (currentData.keterangan_admin || '');
             const finalKet = (orderKet ? orderKet + ' | ' : '') + 'Dari Pesanan: ' + currentData.kode_order;
 
-            // 2. Buat dokumen Pengiriman baru
             const shipmentDoc = {
                 id: shipmentId,
                 kode_pengiriman,
                 po_number: currentData.kode_order, // PO dari pesanan asal
-                so_number: kode_pengiriman,        // SO adalah kode pengiriman itu sendiri
+                so_number: so_number,              // SO Number sendiri (sequential)
                 pengirim: req.user.uid, // Admin yang sedang login
                 penerima: currentData.cabang_id,
                 keterangan: finalKet,
@@ -194,6 +194,18 @@ router.post('/admin/orders/:id', requireAuth, requireRole(['admin']), csrfProtec
     } catch (e) {
         console.error(e);
         return res.redirect('/admin/orders?err=' + encodeURIComponent('Gagal update pesanan'));
+    }
+});
+
+// ====================== ADMIN: DELETE ORDER ======================
+router.post('/admin/orders/:id/delete', requireAuth, requireRole(['admin']), csrfProtection, async (req, res) => {
+    try {
+        const id = req.params.id;
+        await db.collection('orders').doc(id).delete();
+        return res.redirect('/admin/orders?ok=deleted');
+    } catch (e) {
+        console.error("Error deleting order:", e);
+        return res.redirect('/admin/orders?err=' + encodeURIComponent('Gagal menghapus pesanan'));
     }
 });
 
